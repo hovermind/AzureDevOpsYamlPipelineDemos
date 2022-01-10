@@ -1,0 +1,50 @@
+trigger: none
+#- master
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+
+- job: build_job
+  displayName: Build Job
+  steps:
+  - task: UseDotNet@2
+    displayName: Use .Net 6.x
+    inputs:
+      packageType: 'sdk'
+      version: '6.x'
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Restore Before Build'
+    inputs:
+      command: 'restore'
+      projects: '**/XyzAPI/*.csproj'
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Build'
+    inputs:
+      command: 'build'
+      arguments: '--no-restore'
+      projects: '**/XyzAPI/*.csproj'
+
+- job: test_job
+  displayName: Test Job
+  dependsOn: build_job
+  condition: succeeded('build_job')
+  steps:
+  - task: UseDotNet@2
+    displayName: Use .Net 6.x
+    inputs:
+      packageType: 'sdk'
+      version: '6.x'
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Restore Before Test'
+    inputs:
+      command: 'restore'
+      projects: '**/XyzAPI.Test/*.csproj'
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Test'
+    inputs:
+      command: 'test'
+      arguments: '--no-restore'
+      projects: '**/XyzAPI.Test/*.csproj'
+      publishTestResults: true

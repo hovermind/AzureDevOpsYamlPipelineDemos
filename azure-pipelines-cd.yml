@@ -1,0 +1,125 @@
+trigger: none # Since CI completion trigger will be used
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  pipelines:
+  - pipeline: XyzapiPipelineCI
+    source: 'XyzAPI-Pipeline-CI'
+    trigger:
+      branches:
+        include:
+        - master
+
+variables:
+- group: 'xyz-api-vg'
+
+jobs:
+
+- job: buildAndPushDockerImageJob
+  displayName: Build & Push Docker Image Job
+  steps:
+  - task: UseDotNet@2
+    displayName: Use .Net 6.x
+    inputs:
+      packageType: 'sdk'
+      version: '6.x'
+  - task: Docker@2
+    displayName: Build & Push XyzAPI Image to ACR
+    inputs:
+      containerRegistry: AcrServiceConnectionXyzAPI
+      repository: 'xyz-api'
+      command: buildAndPush
+      Dockerfile: '**/XyzAPI/Dockerfile'
+      buildContext: $(Build.Repository.LocalPath)
+      tags: $(Build.BuildId)
+      
+- deployment: deployToAKS
+  displayName: Deploy to AKS
+  dependsOn: buildAndPushDockerImageJob
+  environment: 'AKSDemoEnvironment.devops-demo'
+  strategy:
+    runOnce:
+     deploy:
+       steps:
+        - powershell: |
+           '# service
+           apiVersion: v1
+           kind: Service
+           metadata:
+             name: $(appName)
+             namespace: $(targetNamespace)
+             labels:
+               app: $(appName)
+           spec:
+             type: ClusterIP
+             ports:
+               - port: 80
+                 targetPort: http
+                 protocol: TCP
+                 name: http
+             selector:
+               app: $(appName)
+           
+           ---
+           
+           # deployment
+           apiVersion: apps/v1
+           kind: Deployment
+           metadata:
+             name: $(appName)
+             namespace: $(targetNamespace)
+             labels:
+               app: $(appName)
+           spec:
+             replicas: 3
+             selector:
+               matchLabels:
+                 app: $(appName)
+             template:
+               metadata:
+                 labels:
+                   app: $(appName)
+               spec:
+                 containers:
+                   - name: $(appName)
+                     image: $(acrName).azurecr.io/$(repositoryName):$(Build.BuildId)
+                     ports:
+                       - name: http
+                         containerPort: 80
+                         protocol: TCP
+                     env:
+                     - name: API_BASE_URI
+                       value: $(apiBaseUri)
+           
+           ---
+           
+           # ingress
+           apiVersion: networking.k8s.io/v1
+           kind: Ingress
+           metadata:
+             name: $(appName)
+             namespace: $(targetNamespace)
+             annotations:
+               kubernetes.io/ingress.class: azure/application-gateway
+               appgw.ingress.kubernetes.io/backend-path-prefix: "/api/$(apiBaseUri)/"
+           spec:
+             rules:
+             - host: $(appGwDnsUrl)
+               http:
+                 paths:
+                 - path: /api/$(apiBaseUri)/*
+                   pathType: Prefix
+                   backend:
+                     service:
+                       name: $(appName)
+                       port:
+                         number: 80' | Set-Content $(Agent.TempDirectory)/manifest.yaml
+          displayName: 'Generate K8s Manifest file'
+
+        - task: KubernetesManifest@0
+          displayName: 'Deploy K8s Manifest to AKS'
+          inputs:
+             action: deploy
+             manifests: '$(Agent.TempDirectory)/manifest.yaml'

@@ -1,0 +1,71 @@
+# service
+apiVersion: v1
+kind: Service
+metadata:
+  name: $(appName)
+  namespace: $(targetNamespace)
+  labels:
+    app: $(appName)
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: $(appName)
+
+---
+
+# deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $(appName)
+  namespace: $(targetNamespace)
+  labels:
+    app: $(appName)
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: $(appName)
+  template:
+    metadata:
+      labels:
+        app: $(appName)
+    spec:
+      containers:
+        - name: $(appName)
+          image: $(acrName).azurecr.io/$(repositoryName):$(Build.BuildId)
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+          - name: API_BASE_URI
+            value: $(apiBaseUri)
+---
+
+# ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: $(appName)
+  namespace: $(targetNamespace)
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/api/$(apiBaseUri)/"
+spec:
+  rules:
+  - host: $(appGwDnsUrl)
+    http:
+      paths:
+      - path: /api/$(apiBaseUri)/*
+        pathType: Prefix
+        backend:
+          service:
+            name: $(appName)
+            port:
+              number: 80

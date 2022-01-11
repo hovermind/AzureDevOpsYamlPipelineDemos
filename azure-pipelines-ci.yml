@@ -1,12 +1,12 @@
-trigger: none
-#- master
+trigger:
+- master
 
 pool:
   vmImage: ubuntu-latest
 
 jobs:
 
-- job: build_job
+- job: buildJob
   displayName: Build Job
   steps:
   - task: UseDotNet@2
@@ -26,9 +26,9 @@ jobs:
       arguments: '--no-restore'
       projects: '**/XyzAPI/*.csproj'
 
-- job: test_job
+- job: testJob
   displayName: Test Job
-  dependsOn: build_job
+  dependsOn: buildJob
   condition: succeeded('build_job')
   steps:
   - task: UseDotNet@2
@@ -48,3 +48,21 @@ jobs:
       arguments: '--no-restore'
       projects: '**/XyzAPI.Test/*.csproj'
       publishTestResults: true
+
+- job: buildAndPushDockerImageJob
+  displayName: Build & Push Docker Image Job
+  steps:
+  - task: UseDotNet@2
+    displayName: Use .Net 6.x
+    inputs:
+      packageType: 'sdk'
+      version: '6.x'
+  - task: Docker@2
+    displayName: Build & Push XyzAPI Image to ACR
+    inputs:
+      containerRegistry: AcrServiceConnectionXyzAPI
+      repository: 'xyz-api'
+      command: buildAndPush
+      Dockerfile: '**/XyzAPI/Dockerfile'
+      buildContext: $(Build.Repository.LocalPath)
+      tags: $(Build.BuildId)

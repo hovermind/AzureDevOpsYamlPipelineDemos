@@ -1,11 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31919.166
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31729.503
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XyzAPI", "XyzAPI\XyzAPI.csproj", "{FDB539D6-B213-4D78-877A-783E9ECC0C78}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XyzAPI.Test", "XyzAPI.Test\XyzAPI.Test.csproj", "{9B7B5C00-9B71-4B65-B685-72ADB84B73B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pipelines", "Pipelines", "{E9E57FE0-CD9C-4047-AC64-64830F7CD6CE}"
+	ProjectSection(SolutionItems) = preProject
+		azure-pipelines-cd.yml = azure-pipelines-cd.yml
+		azure-pipelines-ci.yml = azure-pipelines-ci.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "K8sManifests", "K8sManifests", "{ADA67E48-9858-42FB-9732-27C80897B38E}"
+	ProjectSection(SolutionItems) = preProject
+		xyz-api.yaml = xyz-api.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

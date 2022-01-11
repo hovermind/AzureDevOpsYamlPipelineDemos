@@ -16,24 +16,6 @@ variables:
 - group: 'xyz-api-vg'
 
 jobs:
-
-- job: buildAndPushDockerImageJob
-  displayName: Build & Push Docker Image Job
-  steps:
-  - task: UseDotNet@2
-    displayName: Use .Net 6.x
-    inputs:
-      packageType: 'sdk'
-      version: '6.x'
-  - task: Docker@2
-    displayName: Build & Push XyzAPI Image to ACR
-    inputs:
-      containerRegistry: AcrServiceConnectionXyzAPI
-      repository: 'xyz-api'
-      command: buildAndPush
-      Dockerfile: '**/XyzAPI/Dockerfile'
-      buildContext: $(Build.Repository.LocalPath)
-      tags: $(Build.BuildId)
       
 - deployment: deployToAKS
   displayName: Deploy to AKS
